@@ -155,22 +155,28 @@ while True:
 		if entity_type == 0 and owner == my_id:
 			me = entityObjects[-1]
 
-	#bombTheMap()
+	bombTheMap()
 
 	bestX, bestY = getBestLoc()
 	myX, myY = me.x, me.y
 	x, y = -1, -1
+	message = ""
 	
 	#If there are no items, go to best spot
 	items = getItems()
 	if len(items) == 0:
 		x, y = bestX, bestY
+		message = "Bombing!"
 	else:
 		#Is best or item closer?
+		itemDist = abs(math.hypot(x - items[0].x, y - items[0].y))
+		bestDist = abs(math.hypot(x - bestX, y - bestY))
 		if abs(math.hypot(x - items[0].x, y - items[0].y)) < abs(math.hypot(x - bestX, y - bestY)):
 			x, y = items[0].x, items[0].y
+			message = "Item's better!"
 		else:
 			x, y = bestX, bestY
+			message = "Bombing's better!"
 
 	if bestX == myX and bestY == myY:
 		action = "BOMB"
@@ -181,4 +187,4 @@ while True:
 		print("%i %i" % (getBestLoc()), file=sys.stderr)
 		print(gameMap, file=sys.stderr)
 
-	print("%s %i %i" % (action, x, y))
+	print("%s %i %i %s" % (action, x, y, message))
