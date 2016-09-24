@@ -104,15 +104,10 @@ while True:
 	entities = int(input())
 	for i in range(entities):
 		entity_type, owner, x, y, param_1, param_2 = [int(j) for j in input().split()]
-		#print("my_id: "+str(my_id), file=sys.stderr)
-		#print("entity_type: "+str(entity_type), file=sys.stderr)
-		#print("owner: "+str(owner), file=sys.stderr)
-		#print("x: "+str(x), file=sys.stderr)
-		#print("y: "+str(y), file=sys.stderr)
-		#print("param_1: "+str(param_1), file=sys.stderr)
-		#print("param_2: "+str(param_2), file=sys.stderr)
 		entityObjects.append(Entity(entity_type, owner, x, y, param_1, param_2))
 
+	bombTheMap()
+	
 	bestX, bestY = getBestLoc()
 	myX, myY = getCurLoc()
 	
