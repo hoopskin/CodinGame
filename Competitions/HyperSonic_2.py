@@ -27,6 +27,7 @@ roundsRemaining = 200
 #Bomb hitting bomb means bomb explodes (say bomb again. I dare you.)
 
 def getImpact(x, y):
+	#TOOD: Need to realize difference between box (which scores you points) and items.
 	impact = 0
 	#North
 	for i in range(1,me.param_2):
