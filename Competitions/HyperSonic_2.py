@@ -29,38 +29,38 @@ roundsRemaining = 200
 def getImpact(x, y):
 	impact = 0
 	#North
-	for i in range(1,4):
+	for i in range(1,me.param_2):
 		if y-i < 0:
 			break
 		else:
-			if gameMap[y-i][x] == box:
+			if gameMap[y-i][x] != floor:
 				impact+=1
 				break
 
 	#South
-	for i in range(1,4):
+	for i in range(1,me.param_2):
 		if y+i >= height:
 			break
 		else:
-			if gameMap[y+i][x] == box:
+			if gameMap[y+i][x] != floor:
 				impact+=1
 				break
 
 	#East
-	for i in range(1,4):
+	for i in range(1,me.param_2):
 		if x+i >= width:
 			break
 		else:
-			if gameMap[y][x+i] == box:
+			if gameMap[y][x+i] != floor:
 				impact+=1
 				break
 
 	#West
-	for i in range(1,4):
+	for i in range(1,me.param_2):
 		if x-i < 0:
 			break
 		else:
-			if gameMap[y][x-i] == box:
+			if gameMap[y][x-i] != floor:
 				impact+=1
 				break
 
@@ -93,6 +93,53 @@ def getBestLoc():
 					maxImpact = impact
 	return maxX, maxY
 
+def bombTheMap():
+	global gameMap
+	for e in entityObjects:
+		if entity_type == 1:
+			#North
+			for i in range(1,e.param_2):
+				if e.y-i < 0:
+					break
+				else:
+					if gameMap[e.y-i][e.x] != floor:
+						gameMap[e.y-i][e.x] = floor
+						break
+
+			#South
+			for i in range(1,e.param_2):
+				if e.y+i >= height:
+					break
+				else:
+					if gameMap[e.y+i][e.x] != floor:
+						gameMap[e.y+i][e.x] = floor
+						break
+
+			#East
+			for i in range(1,e.param_2):
+				if e.x+i >= width:
+					break
+				else:
+					if gameMap[e.y][e.x+i] != floor:
+						gameMap[e.y][e.x+i] = floor
+						break
+
+			#West
+			for i in range(1,e.param_2):
+				if e.x-i < 0:
+					break
+				else:
+					if gameMap[e.y][e.x-i] != floor:
+						gameMap[e.y][e.x-i] = floor
+						break
+
+def getItems():
+	rtn = []
+	for e in entityObjects:
+		if e.entity_type == 2:
+			rtn.append(e)
+
+	return rtn
 
 # game loop
 while True:
@@ -105,15 +152,33 @@ while True:
 	for i in range(entities):
 		entity_type, owner, x, y, param_1, param_2 = [int(j) for j in input().split()]
 		entityObjects.append(Entity(entity_type, owner, x, y, param_1, param_2))
+		if entity_type == 0 and owner == my_id:
+			me = entityObjects[-1]
 
-	bombTheMap()
-	
+	#bombTheMap()
+
 	bestX, bestY = getBestLoc()
-	myX, myY = getCurLoc()
+	myX, myY = me.x, me.y
+	x, y = -1, -1
 	
+	#If there are no items, go to best spot
+	items = getItems()
+	if len(items) == 0:
+		x, y = bestX, bestY
+	else:
+		#Is best or item closer?
+		if abs(math.hypot(x - items[0].x, y - items[0].y)) < abs(math.hypot(x - bestX, y - bestY)):
+			x, y = items[0].x, items[0].y
+		else:
+			x, y = bestX, bestY
+
 	if bestX == myX and bestY == myY:
 		action = "BOMB"
 	else:
 		action = "MOVE"
 
-	print("%s %i %i" % (action, bestX, bestY))
+	if x == -1:
+		print("%i %i" % (getBestLoc()), file=sys.stderr)
+		print(gameMap, file=sys.stderr)
+
+	print("%s %i %i" % (action, x, y))
