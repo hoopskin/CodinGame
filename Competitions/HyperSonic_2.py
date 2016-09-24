@@ -19,7 +19,6 @@ class Entity(object):
 		
 
 width, height, my_id = [int(i) for i in input().split()]
-gameMap = []
 floor = '.'
 box = '0'
 roundsRemaining = 200
@@ -67,36 +66,59 @@ def getImpact(x, y):
 
 	return impact
 
+def getMyBombObj():
+	for e in entityObjects:
+		if e.entity_type == 1 and e.owner == my_id:
+			return e
+
+def getCurLoc():
+	for e in entityObjects:
+		if e.entity_type == 0 and e.owner == my_id:
+			return e.x, e.y
+
 def getBestLoc():
 	x = 0
 	y = 0
 	maxImpact = 0
 	maxX = -1
 	maxY = -1
+	myBomb = getMyBombObj()
 	for x in range(width):
 		for y in range(height):
-			impact = getImpact(x, y)
-			if impact > maxImpact:
-				maxX = x
-				maxY = y
-				maxImpact = impact
+			if gameMap[y][x] == floor:
+				impact = getImpact(x, y)
+				if impact > maxImpact and (myBomb == None or x != myBomb.x and y != myBomb.y):
+					maxX = x
+					maxY = y
+					maxImpact = impact
 	return maxX, maxY
 
-def getMyBombObj():
-	for e in entityObjects:
-		if e.entity_type == 1 and e.owner = my_id:
-			return e
 
 # game loop
 while True:
 	entityObjects = []
+	gameMap = []
 	for i in range(height):
 		row = input()
 		gameMap.append(list(row))
 	entities = int(input())
 	for i in range(entities):
 		entity_type, owner, x, y, param_1, param_2 = [int(j) for j in input().split()]
+		#print("my_id: "+str(my_id), file=sys.stderr)
+		#print("entity_type: "+str(entity_type), file=sys.stderr)
+		#print("owner: "+str(owner), file=sys.stderr)
+		#print("x: "+str(x), file=sys.stderr)
+		#print("y: "+str(y), file=sys.stderr)
+		#print("param_1: "+str(param_1), file=sys.stderr)
+		#print("param_2: "+str(param_2), file=sys.stderr)
 		entityObjects.append(Entity(entity_type, owner, x, y, param_1, param_2))
 
 	bestX, bestY = getBestLoc()
-	print("BOMB %i %i" % (bestX, bestY))
+	myX, myY = getCurLoc()
+	
+	if bestX == myX and bestY == myY:
+		action = "BOMB"
+	else:
+		action = "MOVE"
+
+	print("%s %i %i" % (action, bestX, bestY))
