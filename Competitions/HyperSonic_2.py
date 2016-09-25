@@ -30,7 +30,8 @@ roundsRemaining = 200
 #Bomb hitting bomb means bomb explodes (say bomb again. I dare you.)
 
 def getImpact(x, y):
-	#TOOD: Need to realize difference between box (which scores you points) and items.
+	#TOOD: Need to realize difference between different boxes.
+	#NOTE: Items appear on map at floor. entityObjects will have it in the list though
 	impact = 0
 	#North
 	for i in range(1,me.param_2):
@@ -74,31 +75,66 @@ def getImpact(x, y):
 
 	return impact
 
-def getMyBombObj():
-	for e in entityObjects:
-		if e.entity_type == 1 and e.owner == my_id:
-			return e
-
 def getCurLoc():
 	for e in entityObjects:
 		if e.entity_type == 0 and e.owner == my_id:
 			return e.x, e.y
 
+possibleLocations = []
+
+def fillTempMap(x, y):
+	global tmpMap, possibleLocations
+	possibleLocations.append([x,y])
+	#North
+	#If it's in the map
+	if y-1 > 0:
+		#and is a dot
+		if tmpMap[y-1][x] == ".":
+			#Visit it and fill
+			tmpMap[y-1][x] = "!"
+			fillTempMap(x, y-1)
+
+	#South
+	if y+1 < height:
+		if tmpMap[y+1][x] == ".":
+			tmpMap[y+1][x] = "!"
+			fillTempMap(x, y+1)
+
+	#East
+	if x+1 < width:
+		if tmpMap[y][x+1] == ".":
+			tmpMap[y][x+1] = "!"
+			fillTempMap(x+1, y)
+
+	#West
+	if x-1 > 0:
+		if tmpMap[y][x-1] == ".":
+			tmpMap[y][x-1] = "!"
+			fillTempMap(x-1, y)
+
 def getBestLoc():
-	x = 0
-	y = 0
+	x = me.x
+	y = me.y
 	maxImpact = 0
 	maxX = -1
 	maxY = -1
-	myBomb = getMyBombObj()
-	for x in range(width):
-		for y in range(height):
-			if gameMap[y][x] == floor:
-				impact = getImpact(x, y)
-				if impact > maxImpact and (myBomb == None or x != myBomb.x and y != myBomb.y):
-					maxX = x
-					maxY = y
-					maxImpact = impact
+	
+	fillTempMap(me.x, me.y)
+
+	for e in getMyBombs():
+		try:
+			possibleLocations.remove([e.x, e.y])
+		except(ValueError):
+			pass
+
+	for loc in possibleLocations:
+		impact = getImpact(loc[0], loc[1])
+		#What if a / my bomb is there?
+		if impact > maxImpact:
+			maxX = loc[0]
+			maxY = loc[1]
+			maxImpact = impact
+
 	return maxX, maxY
 
 def bombTheMap():
@@ -145,6 +181,13 @@ def bombTheMap():
 							gameMap[e.y][e.x-i] = floor
 						break
 
+def getMyBombs():
+	rtn = []
+	for e in entityObjects:
+		if e.entity_type == 1 and e.owner == my_id:
+			rtn.append(e)
+	return rtn
+
 def getItems():
 	rtn = []
 	for e in entityObjects:
@@ -157,10 +200,12 @@ def getItems():
 while True:
 	entityObjects = []
 	gameMap = []
+	tmpMap = []
 	for i in range(height):
 		row = input()
-		print(row, file=sys.stderr)
+		#print(row, file=sys.stderr)
 		gameMap.append(list(row))
+		tmpMap.append(list(row))
 	entities = int(input())
 	for i in range(entities):
 		entity_type, owner, x, y, param_1, param_2 = [int(j) for j in input().split()]
@@ -168,7 +213,7 @@ while True:
 		if entity_type == 0 and owner == my_id:
 			me = entityObjects[-1]
 
-	bombTheMap()
+	#bombTheMap()
 
 	bestX, bestY = getBestLoc()
 	myX, myY = me.x, me.y
@@ -176,6 +221,8 @@ while True:
 	message = ""
 	
 	#If there are no items, go to best spot
+	#TODO: If I have an un-beatable score (the difference is too big to surmount), then I should hide and not die
+	#TODO: Need to go bomb somewhere if I still have available bombs
 	items = getItems()
 	if len(items) == 0:
 		x, y = bestX, bestY
