@@ -24,6 +24,7 @@ emptyBox = '0'
 rangeBox = '1'
 bombBox = '2'
 wall = 'X'
+locsToGet = 1
 roundsRemaining = 200
 
 #Bomb Range = 3
@@ -80,8 +81,6 @@ def getCurLoc():
 		if e.entity_type == 0 and e.owner == my_id:
 			return e.x, e.y
 
-possibleLocations = []
-
 def fillTempMap(x, y):
 	global tmpMap, possibleLocations
 	possibleLocations.append([x,y])
@@ -112,30 +111,71 @@ def fillTempMap(x, y):
 			tmpMap[y][x-1] = "!"
 			fillTempMap(x-1, y)
 
+def getColumnValues(data, idx):
+	"""Gets all the values from one column into an array. Returns that array"""
+	rtn = []
+	for row in data:
+		rtn.append(row[idx])
+	return rtn
+
+def sortByColumnIdx(data, idx):
+	valsToSortOn = getColumnValues(data, idx)
+	
+	#Remove Duplicates
+	valsToSortOn = list(set(valsToSortOn))
+	
+	#Sort
+	valsToSortOn.sort()
+	valsToSortOn.reverse()
+
+	rtn = []
+	#For each value to sort on
+	for val in valsToSortOn:
+		#1 to account for headers
+		i = 0
+		idxsToRemove = []
+		while i < len(data):
+			row = data[i]
+			if row[idx] == val:
+				rtn.append(row)
+				idxsToRemove.append(i)
+			i+=1
+		#Sort & Reverse to ensure that the index for the objects we want to delete don't move
+		idxsToRemove.sort()
+		idxsToRemove.reverse()
+		for i in idxsToRemove:
+			data.remove(data[i])
+
+	return rtn
+
 def getBestLoc():
+	global possibleLocations
+
+	#TODO: Return x best where x = number of bombs I can drop
 	x = me.x
 	y = me.y
 	maxImpact = 0
 	maxX = -1
 	maxY = -1
-	
+
 	fillTempMap(me.x, me.y)
 
+	#Remove my bombs from possible spots
 	for e in getMyBombs():
 		try:
 			possibleLocations.remove([e.x, e.y])
 		except(ValueError):
 			pass
 
-	for loc in possibleLocations:
-		impact = getImpact(loc[0], loc[1])
-		#What if a / my bomb is there?
-		if impact > maxImpact:
-			maxX = loc[0]
-			maxY = loc[1]
-			maxImpact = impact
+	i = 0
+	while i < len(possibleLocations):
+		loc = possibleLocations[i]
+		possibleLocations[i].append(getImpact(loc[0], loc[1]))
+		i+=1
 
-	return maxX, maxY
+	possibleLocations = sortByColumnIdx(possibleLocations, -1)
+
+	return possibleLocations[:locsToGet]
 
 def bombTheMap():
 	global gameMap
@@ -201,6 +241,7 @@ while True:
 	entityObjects = []
 	gameMap = []
 	tmpMap = []
+	possibleLocations = []
 	for i in range(height):
 		row = input()
 		#print(row, file=sys.stderr)
@@ -212,10 +253,14 @@ while True:
 		entityObjects.append(Entity(entity_type, owner, x, y, param_1, param_2))
 		if entity_type == 0 and owner == my_id:
 			me = entityObjects[-1]
+			locsToGet = max(locsToGet, me.param_1)
 
 	#bombTheMap()
 
-	bestX, bestY = getBestLoc()
+	bestLocs = getBestLoc()
+	print(bestLocs, file=sys.stderr)
+	bestX = bestLocs[0][0]
+	bestY = bestLocs[0][1]
 	myX, myY = me.x, me.y
 	x, y = -1, -1
 	message = ""
