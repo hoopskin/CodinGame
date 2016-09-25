@@ -20,7 +20,10 @@ class Entity(object):
 
 width, height, my_id = [int(i) for i in input().split()]
 floor = '.'
-box = '0'
+emptyBox = '0'
+rangeBox = '1'
+bombBox = '2'
+wall = 'X'
 roundsRemaining = 200
 
 #Bomb Range = 3
@@ -35,7 +38,8 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y-i][x] != floor:
-				impact+=1
+				if gameMap[y-i][x] != wall:
+					impact+=1
 				break
 
 	#South
@@ -44,7 +48,8 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y+i][x] != floor:
-				impact+=1
+				if gameMap[y+i][x] != wall:
+					impact+=1
 				break
 
 	#East
@@ -53,7 +58,8 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y][x+i] != floor:
-				impact+=1
+				if gameMap[y][x+i] != wall:
+					impact+=1
 				break
 
 	#West
@@ -62,7 +68,8 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y][x-i] != floor:
-				impact+=1
+				if gameMap[y][x-i] != wall:
+					impact+=1
 				break
 
 	return impact
@@ -104,7 +111,8 @@ def bombTheMap():
 					break
 				else:
 					if gameMap[e.y-i][e.x] != floor:
-						gameMap[e.y-i][e.x] = floor
+						if gameMap[e.y-i][e.x] != wall:
+							gameMap[e.y-i][e.x] = floor
 						break
 
 			#South
@@ -113,7 +121,8 @@ def bombTheMap():
 					break
 				else:
 					if gameMap[e.y+i][e.x] != floor:
-						gameMap[e.y+i][e.x] = floor
+						if gameMap[e.y+i][e.x] != wall:
+							gameMap[e.y+i][e.x] = floor
 						break
 
 			#East
@@ -122,7 +131,8 @@ def bombTheMap():
 					break
 				else:
 					if gameMap[e.y][e.x+i] != floor:
-						gameMap[e.y][e.x+i] = floor
+						if gameMap[e.y][e.x+i] != wall:
+							gameMap[e.y][e.x+i] = floor
 						break
 
 			#West
@@ -131,7 +141,8 @@ def bombTheMap():
 					break
 				else:
 					if gameMap[e.y][e.x-i] != floor:
-						gameMap[e.y][e.x-i] = floor
+						if gameMap[e.y][e.x-i] != wall:
+							gameMap[e.y][e.x-i] = floor
 						break
 
 def getItems():
@@ -148,6 +159,7 @@ while True:
 	gameMap = []
 	for i in range(height):
 		row = input()
+		print(row, file=sys.stderr)
 		gameMap.append(list(row))
 	entities = int(input())
 	for i in range(entities):
@@ -183,9 +195,5 @@ while True:
 		action = "BOMB"
 	else:
 		action = "MOVE"
-
-	if x == -1:
-		print("%i %i" % (getBestLoc()), file=sys.stderr)
-		print(gameMap, file=sys.stderr)
 
 	print("%s %i %i %s" % (action, x, y, message))
