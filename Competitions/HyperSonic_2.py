@@ -40,9 +40,14 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y-i][x] != floor:
-				if gameMap[y-i][x] != wall:
-					impact+=1
-				break
+				if [x,y] in itemLocs:
+					impact-=1
+					break
+				if gameMap[y-i][x] == wall:
+					break
+				else:
+					impact+=1+int(gameMap[y-i][x])
+					break
 
 	#South
 	for i in range(1,me.param_2):
@@ -50,9 +55,14 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y+i][x] != floor:
-				if gameMap[y+i][x] != wall:
-					impact+=1
-				break
+				if [x,y] in itemLocs:
+					impact-=1
+					break
+				if gameMap[y+i][x] == wall:
+					break
+				else:
+					impact+=1+int(gameMap[y+i][x])
+					break
 
 	#East
 	for i in range(1,me.param_2):
@@ -60,9 +70,14 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y][x+i] != floor:
-				if gameMap[y][x+i] != wall:
-					impact+=1
-				break
+				if [x,y] in itemLocs:
+					impact-=1
+					break
+				if gameMap[y][x+i] == wall:
+					break
+				else:
+					impact+=1+int(gameMap[y][x+i])
+					break
 
 	#West
 	for i in range(1,me.param_2):
@@ -70,9 +85,14 @@ def getImpact(x, y):
 			break
 		else:
 			if gameMap[y][x-i] != floor:
-				if gameMap[y][x-i] != wall:
-					impact+=1
-				break
+				if [x,y] in itemLocs:
+					impact-=1
+					break
+				if gameMap[y][x-i] == wall:
+					break
+				else:
+					impact+=1+int(gameMap[y][x-i])
+					break
 
 	return impact
 
@@ -83,32 +103,29 @@ def getCurLoc():
 
 def fillTempMap(x, y):
 	global tmpMap, possibleLocations
+	tmpMap[y][x] = "!"
 	possibleLocations.append([x,y])
 	#North
 	#If it's in the map
-	if y-1 > 0:
+	if y-1 >= 0:
 		#and is a dot
 		if tmpMap[y-1][x] == ".":
 			#Visit it and fill
-			tmpMap[y-1][x] = "!"
 			fillTempMap(x, y-1)
 
 	#South
 	if y+1 < height:
 		if tmpMap[y+1][x] == ".":
-			tmpMap[y+1][x] = "!"
 			fillTempMap(x, y+1)
 
 	#East
 	if x+1 < width:
 		if tmpMap[y][x+1] == ".":
-			tmpMap[y][x+1] = "!"
 			fillTempMap(x+1, y)
 
 	#West
-	if x-1 > 0:
+	if x-1 >= 0:
 		if tmpMap[y][x-1] == ".":
-			tmpMap[y][x-1] = "!"
 			fillTempMap(x-1, y)
 
 def getColumnValues(data, idx):
@@ -174,6 +191,9 @@ def getBestLoc():
 		i+=1
 
 	possibleLocations = sortByColumnIdx(possibleLocations, -1)
+	#possibleLocations.sort(key=lambda row: row[2], reverse=True)
+	#possibleLocations.sort(key=lambda row: row[1])
+	#sorted(possibleLocations, key=lambda x: (-x[-1]))
 
 	return possibleLocations[:locsToGet]
 
@@ -236,17 +256,30 @@ def getItems():
 
 	return rtn
 
+def matchesLastBestLocs(tmpBestLocs):
+	for i in lastBestLocs:
+		try:
+			tmpBestLocs.remove(i)
+		except(ValueError):
+			return False
+	return True
+
 # game loop
+lastAction = [-1,-1,-1]
+lastBestLocs = []
 while True:
+	#Reset any necessary variables
 	entityObjects = []
 	gameMap = []
 	tmpMap = []
 	possibleLocations = []
+
+	#Get Round data
 	for i in range(height):
 		row = input()
-		#print(row, file=sys.stderr)
 		gameMap.append(list(row))
 		tmpMap.append(list(row))
+
 	entities = int(input())
 	for i in range(entities):
 		entity_type, owner, x, y, param_1, param_2 = [int(j) for j in input().split()]
@@ -255,37 +288,45 @@ while True:
 			me = entityObjects[-1]
 			locsToGet = max(locsToGet, me.param_1)
 
-	#bombTheMap()
-
-	bestLocs = getBestLoc()
-	print(bestLocs, file=sys.stderr)
-	bestX = bestLocs[0][0]
-	bestY = bestLocs[0][1]
-	myX, myY = me.x, me.y
-	x, y = -1, -1
-	message = ""
-	
-	#If there are no items, go to best spot
-	#TODO: If I have an un-beatable score (the difference is too big to surmount), then I should hide and not die
-	#TODO: Need to go bomb somewhere if I still have available bombs
+	#Capture items and their locations
 	items = getItems()
-	if len(items) == 0:
-		x, y = bestX, bestY
-		message = "Bombing!"
-	else:
-		#Is best or item closer?
-		itemDist = abs(math.hypot(x - items[0].x, y - items[0].y))
-		bestDist = abs(math.hypot(x - bestX, y - bestY))
-		if abs(math.hypot(x - items[0].x, y - items[0].y)) < abs(math.hypot(x - bestX, y - bestY)):
-			x, y = items[0].x, items[0].y
-			message = "Item's better!"
-		else:
-			x, y = bestX, bestY
-			message = "Bombing's better!"
+	itemLocs = []
+	for i in items:
+		itemLocs.append([i.x, i.y])
 
-	if bestX == myX and bestY == myY:
+	#Determine the X best locations where X = max of bombs available or 1
+	bestLocs = getBestLoc()
+
+	print("Length: %i" % (me.param_2), file=sys.stderr)
+	print(bestLocs, file=sys.stderr)
+	
+	message = ""
+	action = ""
+	x, y = -1, -1
+
+	#If there's nothing better than what I was going for, keep going for it
+	if lastAction[-1] > bestLocs[0][-1]:
+		message = "Old: %i > %i" % (lastAction[-1], bestLocs[0][-1])
+		x, y = lastAction[0], lastAction[1]
+	else:
+		message = "New: %i < %i" % (lastAction[-1], bestLocs[0][-1])
+		x, y = bestLocs[0][0], bestLocs[0][1]
+
+	#If there's a closer item, get that instead
+	if len(items) > 0:
+		shortestDist = abs(math.hypot(me.x - x, me.y - y))
+		for i in items:
+			itemDist = abs(math.hypot(me.x - i.x, me.y - i.y))
+			if itemDist < shortestDist:
+				message = "Items rule!"
+				shortestDist = itemDist
+				x, y = i.x, i.y
+
+	#If the impact of here is > 2 OR I'm at the best spot, BOMB. Else MOVE
+	if (me.x == x and me.y == y and message != "Items rule!") or getImpact(x,y) > 2:
 		action = "BOMB"
 	else:
 		action = "MOVE"
 
+	lastAction = [x, y, getImpact(x,y)]
 	print("%s %i %i %s" % (action, x, y, message))
