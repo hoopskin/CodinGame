@@ -274,6 +274,7 @@ def matchesLastBestLocs(tmpBestLocs):
 	return True
 
 # game loop
+lastCommand = ""
 lastAction = [-1,-1,-1]
 lastBestLocs = []
 while True:
@@ -337,9 +338,12 @@ while True:
 	else:
 		action = "MOVE"
 
+	if lastCommand == "BOMB":
+		action = "MOVE"
 	print("Last Action: "+str(lastAction), file=sys.stderr)
 	print("Current Action: "+str([x, y, getImpact(x,y)]), file=sys.stderr)
 
+	lastCommand = action
 	lastAction = [x, y, getImpact(x,y)]
 	lastMessage = message
 
