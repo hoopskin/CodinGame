@@ -3,7 +3,7 @@ import math
 
 class Entity(object):
 	def __init__(self, entity_type, owner, x, y, param_1, param_2):
-		#entity_type = id of the player (0 for player or 1 for bomb)
+		#entity_type = id of the player (0 for player 1 for bomb, 2 for item)
 		#owner = id of the bomb owner
 		#x = x
 		#y = y
@@ -177,8 +177,8 @@ def getBestLoc():
 
 	fillTempMap(me.x, me.y)
 
-	#Remove my bombs from possible spots
-	for e in getMyBombs():
+	#Remove bombs from possible spots
+	for e in getBombs():
 		try:
 			possibleLocations.remove([e.x, e.y])
 		except(ValueError):
@@ -191,9 +191,10 @@ def getBestLoc():
 		i+=1
 
 	possibleLocations = sortByColumnIdx(possibleLocations, -1)
-	#possibleLocations.sort(key=lambda row: row[2], reverse=True)
-	#possibleLocations.sort(key=lambda row: row[1])
-	#sorted(possibleLocations, key=lambda x: (-x[-1]))
+	if possibleLocations[0][0] == me.x and possibleLocations[0][1] == me.y:
+		for b in getBombs():
+			if possibleLocations[0][0] == b.x and possibleLocations[0][1] == b.y:
+				possibleLocations = possibleLocations[1:]
 
 	return possibleLocations[:locsToGet]
 
@@ -252,6 +253,14 @@ def getItems():
 	rtn = []
 	for e in entityObjects:
 		if e.entity_type == 2:
+			rtn.append(e)
+
+	return rtn
+
+def getBombs():
+	rtn = []
+	for e in entityObjects:
+		if e.entity_type == 1:
 			rtn.append(e)
 
 	return rtn
@@ -323,10 +332,16 @@ while True:
 				x, y = i.x, i.y
 
 	#If the impact of here is > 2 OR I'm at the best spot, BOMB. Else MOVE
-	if (me.x == x and me.y == y and message != "Items rule!") or getImpact(x,y) > 2:
+	if (me.x == x and me.y == y and message != "Items rule!") or getImpact(x,y) > 3:
 		action = "BOMB"
 	else:
 		action = "MOVE"
 
+	print("Last Action: "+str(lastAction), file=sys.stderr)
+	print("Current Action: "+str([x, y, getImpact(x,y)]), file=sys.stderr)
+
 	lastAction = [x, y, getImpact(x,y)]
+	lastMessage = message
+
+	#TODO: If they haven't moved in awhile and I'm winning, run out the clock?
 	print("%s %i %i %s" % (action, x, y, message))
