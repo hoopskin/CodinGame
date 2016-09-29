@@ -1,8 +1,6 @@
 import sys
 import math
 
-#Bronze League!
-
 class Entity(object):
 	def __init__(self, entity_type, owner, x, y, param_1, param_2):
 		#entity_type = id of the player (0 for player 1 for bomb, 2 for item)
@@ -29,8 +27,11 @@ wall = 'X'
 locsToGet = 1
 roundsRemaining = 200
 
-#Bomb Range = 3
-#Bomb hitting bomb means bomb explodes (say bomb again. I dare you.)
+itemImpact = -1
+boxImpactDict = {
+emptyBox:1,
+rangeBox:2,
+bombBox:3}
 
 def getImpact(x, y):
 	#TOOD: Need to realize difference between different boxes.
@@ -43,12 +44,12 @@ def getImpact(x, y):
 		else:
 			if gameMap[y-i][x] != floor:
 				if [x,y] in itemLocs:
-					impact-=1
+					impact+=itemImpact
 					break
 				if gameMap[y-i][x] == wall:
 					break
 				else:
-					impact+=1+int(gameMap[y-i][x])
+					impact+=boxImpactDict[gameMap[y-i][x]]
 					break
 
 	#South
@@ -58,12 +59,12 @@ def getImpact(x, y):
 		else:
 			if gameMap[y+i][x] != floor:
 				if [x,y] in itemLocs:
-					impact-=1
+					impact+=itemImpact
 					break
 				if gameMap[y+i][x] == wall:
 					break
 				else:
-					impact+=1+int(gameMap[y+i][x])
+					impact+=boxImpactDict[gameMap[y+i][x]]
 					break
 
 	#East
@@ -73,12 +74,12 @@ def getImpact(x, y):
 		else:
 			if gameMap[y][x+i] != floor:
 				if [x,y] in itemLocs:
-					impact-=1
+					impact+=itemImpact
 					break
 				if gameMap[y][x+i] == wall:
 					break
 				else:
-					impact+=1+int(gameMap[y][x+i])
+					impact+=boxImpactDict[gameMap[y][x+i]]
 					break
 
 	#West
@@ -88,12 +89,12 @@ def getImpact(x, y):
 		else:
 			if gameMap[y][x-i] != floor:
 				if [x,y] in itemLocs:
-					impact-=1
+					impact+=itemImpact
 					break
 				if gameMap[y][x-i] == wall:
 					break
 				else:
-					impact+=1+int(gameMap[y][x-i])
+					impact+=boxImpactDict[gameMap[y][x-i]]
 					break
 
 	return impact
@@ -200,57 +201,6 @@ def getBestLoc():
 
 	return possibleLocations[:locsToGet]
 
-def bombTheMap():
-	global gameMap
-	for e in entityObjects:
-		if entity_type == 1:
-			#North
-			for i in range(1,e.param_2):
-				if e.y-i < 0:
-					break
-				else:
-					if gameMap[e.y-i][e.x] != floor:
-						if gameMap[e.y-i][e.x] != wall:
-							gameMap[e.y-i][e.x] = floor
-						break
-
-			#South
-			for i in range(1,e.param_2):
-				if e.y+i >= height:
-					break
-				else:
-					if gameMap[e.y+i][e.x] != floor:
-						if gameMap[e.y+i][e.x] != wall:
-							gameMap[e.y+i][e.x] = floor
-						break
-
-			#East
-			for i in range(1,e.param_2):
-				if e.x+i >= width:
-					break
-				else:
-					if gameMap[e.y][e.x+i] != floor:
-						if gameMap[e.y][e.x+i] != wall:
-							gameMap[e.y][e.x+i] = floor
-						break
-
-			#West
-			for i in range(1,e.param_2):
-				if e.x-i < 0:
-					break
-				else:
-					if gameMap[e.y][e.x-i] != floor:
-						if gameMap[e.y][e.x-i] != wall:
-							gameMap[e.y][e.x-i] = floor
-						break
-
-def getMyBombs():
-	rtn = []
-	for e in entityObjects:
-		if e.entity_type == 1 and e.owner == my_id:
-			rtn.append(e)
-	return rtn
-
 def getItems():
 	rtn = []
 	for e in entityObjects:
@@ -267,13 +217,6 @@ def getBombs():
 
 	return rtn
 
-def matchesLastBestLocs(tmpBestLocs):
-	for i in lastBestLocs:
-		try:
-			tmpBestLocs.remove(i)
-		except(ValueError):
-			return False
-	return True
 
 # game loop
 lastCommand = ""
