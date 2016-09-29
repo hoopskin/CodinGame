@@ -1,6 +1,8 @@
 import sys
 import math
 
+#Bronze League!
+
 class Entity(object):
 	def __init__(self, entity_type, owner, x, y, param_1, param_2):
 		#entity_type = id of the player (0 for player 1 for bomb, 2 for item)
