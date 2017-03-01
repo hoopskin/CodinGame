@@ -33,15 +33,16 @@ emptyBox:1,
 rangeBox:2,
 bombBox:3}
 
-def getImpact(x, y):
-	#TOOD: Need to realize difference between different boxes.
+def getImpact(x, y, wantLocations):
 	#NOTE: Items appear on map at floor. entityObjects will have it in the list though
 	impact = 0
+	impactedLocations = [[x,y]]
 	#North
 	for i in range(1,me.param_2):
 		if y-i < 0:
 			break
 		else:
+			impactedLocations.append([x,(y-i)])
 			if gameMap[y-i][x] != floor:
 				if [x,y] in itemLocs:
 					impact+=itemImpact
@@ -57,6 +58,7 @@ def getImpact(x, y):
 		if y+i >= height:
 			break
 		else:
+			impactedLocations.append([x,(y+i)])
 			if gameMap[y+i][x] != floor:
 				if [x,y] in itemLocs:
 					impact+=itemImpact
@@ -72,6 +74,7 @@ def getImpact(x, y):
 		if x+i >= width:
 			break
 		else:
+			impactedLocations.append([(x+i),y])
 			if gameMap[y][x+i] != floor:
 				if [x,y] in itemLocs:
 					impact+=itemImpact
@@ -87,6 +90,7 @@ def getImpact(x, y):
 		if x-i < 0:
 			break
 		else:
+			impactedLocations.append([(x-i),y])
 			if gameMap[y][x-i] != floor:
 				if [x,y] in itemLocs:
 					impact+=itemImpact
@@ -97,13 +101,17 @@ def getImpact(x, y):
 					impact+=boxImpactDict[gameMap[y][x-i]]
 					break
 
-	return impact
+	if wantLocations:
+		return impactedLocations
+	else:
+		return impact
 
 def getCurLoc():
 	for e in entityObjects:
 		if e.entity_type == 0 and e.owner == my_id:
 			return e.x, e.y
 
+#TODO: Use something like this to find the closest non-bomb affected square
 def fillTempMap(x, y):
 	global tmpMap, possibleLocations
 	tmpMap[y][x] = "!"
@@ -112,23 +120,23 @@ def fillTempMap(x, y):
 	#If it's in the map
 	if y-1 >= 0:
 		#and is a dot
-		if tmpMap[y-1][x] == ".":
+		if tmpMap[y-1][x] == "." and ([x, y-1] not in bombLocs):
 			#Visit it and fill
 			fillTempMap(x, y-1)
 
 	#South
 	if y+1 < height:
-		if tmpMap[y+1][x] == ".":
+		if tmpMap[y+1][x] == "." and ([x, y+1] not in bombLocs):
 			fillTempMap(x, y+1)
 
 	#East
 	if x+1 < width:
-		if tmpMap[y][x+1] == ".":
+		if tmpMap[y][x+1] == "." and ([x+1, y] not in bombLocs):
 			fillTempMap(x+1, y)
 
 	#West
 	if x-1 >= 0:
-		if tmpMap[y][x-1] == ".":
+		if tmpMap[y][x-1] == "." and ([x-1, y] not in bombLocs):
 			fillTempMap(x-1, y)
 
 def getColumnValues(data, idx):
@@ -169,9 +177,8 @@ def sortByColumnIdx(data, idx):
 	return rtn
 
 def getBestLoc():
-	global possibleLocations
+	global possibleLocations, dangerLocations
 
-	#TODO: Return x best where x = number of bombs I can drop
 	x = me.x
 	y = me.y
 	maxImpact = 0
@@ -186,11 +193,25 @@ def getBestLoc():
 			possibleLocations.remove([e.x, e.y])
 		except(ValueError):
 			pass
+			#Remove bomb-affected places as well (does mean that we'll ignore it even if bomb will go off before arriving)
+		for loc in getImpact(e.x, e.y, True):
+			dangerLocations.append([loc[0],loc[1]])
+
+	try:
+		possibleLocations.remove([0,0])
+	except(ValueError):
+		pass
+
+	for d in dangerLocations:
+		try:
+			possibleLocations.remove([d[0],d[1]])
+		except(ValueError):
+			pass
 
 	i = 0
 	while i < len(possibleLocations):
 		loc = possibleLocations[i]
-		possibleLocations[i].append(getImpact(loc[0], loc[1]))
+		possibleLocations[i].append(getImpact(loc[0], loc[1], False))
 		i+=1
 
 	possibleLocations = sortByColumnIdx(possibleLocations, -1)
@@ -217,7 +238,6 @@ def getBombs():
 
 	return rtn
 
-
 # game loop
 lastCommand = ""
 lastAction = [-1,-1,-1]
@@ -228,10 +248,12 @@ while True:
 	gameMap = []
 	tmpMap = []
 	possibleLocations = []
+	dangerLocations = []
 
 	#Get Round data
 	for i in range(height):
 		row = input()
+		#print(row, file=sys.stderr)
 		gameMap.append(list(row))
 		tmpMap.append(list(row))
 
@@ -249,8 +271,18 @@ while True:
 	for i in items:
 		itemLocs.append([i.x, i.y])
 
+	bombs = getBombs()
+	bombLocs = []
+	for b in bombs:
+		bombLocs.append([b.x, b.y])
+
 	#Determine the X best locations where X = max of bombs available or 1
-	bestLocs = getBestLoc()
+	try:
+		bestLocs = getBestLoc()
+	except(IndexError):
+		#There's no where to go, but hopefully there will be
+		print("MOVE %i %i Wait and die..." % (lastAction[0], lastAction[1]))
+		continue
 
 	print("Length: %i" % (me.param_2), file=sys.stderr)
 	print(bestLocs, file=sys.stderr)
@@ -260,25 +292,32 @@ while True:
 	x, y = -1, -1
 
 	#If there's nothing better than what I was going for, keep going for it
-	if lastAction[-1] > bestLocs[0][-1]:
+	if lastAction[-1] >= bestLocs[0][-1]:
 		message = "Old: %i > %i" % (lastAction[-1], bestLocs[0][-1])
 		x, y = lastAction[0], lastAction[1]
 	else:
 		message = "New: %i < %i" % (lastAction[-1], bestLocs[0][-1])
 		x, y = bestLocs[0][0], bestLocs[0][1]
 
+	print("DangerLocs: "+str(dangerLocations), file=sys.stderr)
+	#If old is danger, choose new
+	if [x, y] in dangerLocations:
+		message = "I want to live!"
+		x, y = bestLocs[0][0], bestLocs[0][1]
+
 	#If there's a closer item, get that instead
 	if len(items) > 0:
 		shortestDist = abs(math.hypot(me.x - x, me.y - y))
 		for i in items:
-			itemDist = abs(math.hypot(me.x - i.x, me.y - i.y))
-			if itemDist < shortestDist:
-				message = "Items rule!"
-				shortestDist = itemDist
-				x, y = i.x, i.y
+			if [i.x, i.y, getImpact(i.x, i.y, False)] in possibleLocations:
+				itemDist = abs(math.hypot(me.x - i.x, me.y - i.y))
+				if itemDist < shortestDist:
+					message = "Items rule!"
+					shortestDist = itemDist
+					x, y = i.x, i.y
 
 	#If the impact of here is > 2 OR I'm at the best spot, BOMB. Else MOVE
-	if (me.x == x and me.y == y and message != "Items rule!") or getImpact(x,y) > 3:
+	if (me.x == x and me.y == y and message != "Items rule!") or (getImpact(x,y, False) > 3 and abs(math.hypot(me.x - x, me.y - y)) > 2):
 		action = "BOMB"
 	else:
 		action = "MOVE"
@@ -286,11 +325,14 @@ while True:
 	if lastCommand == "BOMB":
 		action = "MOVE"
 	print("Last Action: "+str(lastAction), file=sys.stderr)
-	print("Current Action: "+str([x, y, getImpact(x,y)]), file=sys.stderr)
+	print("Current Action: "+str([x, y, getImpact(x,y, False)]), file=sys.stderr)
 
 	lastCommand = action
-	lastAction = [x, y, getImpact(x,y)]
+	lastAction = [x, y, getImpact(x,y, False)]
 	lastMessage = message
 
 	#TODO: If they haven't moved in awhile and I'm winning, run out the clock?
+	if roundsRemaining == 200 and y == 0 and action == "BOMB":
+		action = "MOVE"
 	print("%s %i %i %s" % (action, x, y, message))
+	roundsRemaining-=1
