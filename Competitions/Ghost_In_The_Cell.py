@@ -23,7 +23,7 @@ def buildFactoryDict():
 	rtn = {0: [], 1: [], -1: []}
 
 	for e in entityObjects:
-		if e.entity_type == "FACTORY":
+		if e.entity_type == "FACTORY" and (e.factoryProduction > 0 or e.owner == 1):
 			rtn[e.owner].append(e)
 
 	return rtn
@@ -137,13 +137,13 @@ while True:
 		source = bestFromFactory.entity_id
 		destination = bestTo
 		print("%i*%.2f v. %i*%.2f" % (neutralCount, neutralTroopPercent, bestFromFactory.cyborgCount, alwaysHoldingPercent), file=sys.stderr)
-		cyborgs = int(max(neutralCount*neutralTroopPercent, bestFromFactory.cyborgCount*alwaysHoldingPercent))
+		cyborgs = int(max(neutralCount*neutralTroopPercent, bestFromFactory.cyborgCount*alwaysHoldingPercent))+1
 
 
 	else:
-		acitonValue = r.randint(1,100)
+		actionValue = r.randint(1,100)
 		#Attack: Find weakest/closest enemy factory, Send 120% of minimum to that factory 
-		if acitonValue < attackPercent:
+		if actionValue < attackPercent:
 			print("Attacking", file=sys.stderr)
 			factoryToAttack = detFactoryToAttack()
 			print("Going to attack %i" % (factoryToAttack.entity_id), file=sys.stderr)
@@ -151,9 +151,9 @@ while True:
 			action = "MOVE"
 			source = bestFromFactory.entity_id
 			destination = factoryToAttack.entity_id
-			cyborgs = int(max(factoryToAttack.cyborgCount*attackTroopPercent, bestFromFactory.cyborgCount*alwaysHoldingPercent))
+			cyborgs = int(max(factoryToAttack.cyborgCount*attackTroopPercent, bestFromFactory.cyborgCount*alwaysHoldingPercent))+1
 		#Defend: Find weakest friendly factory (or one being targeted), Send 120% of minimum to that factory
-		elif acitonValue < defendPercent:
+		elif actionValue < defendPercent:
 			print("Defending", file=sys.stderr)
 			factoryToDefend = detFactoryToDefend()
 			print("Going to defend %i" % (factoryToDefend.entity_id), file=sys.stderr)
@@ -161,7 +161,7 @@ while True:
 			action = "MOVE"
 			source = bestFromFactory.entity_id
 			destination = factoryToDefend.entity_id
-			cyborgs = int(max(factoryToDefend.cyborgCount*defendTroopPercent, bestFromFactory.cyborgCount*alwaysHoldingPercent))
+			cyborgs = int(max(factoryToDefend.cyborgCount*defendTroopPercent, bestFromFactory.cyborgCount*alwaysHoldingPercent))+1
 		#Neutral: Wait...
 		else:
 			print("Waiting", file=sys.stderr)
