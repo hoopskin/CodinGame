@@ -124,6 +124,9 @@ class Game:
 		unitList = [u for u in self.units if u.owner == ME]
 		for unit in unitList:
 			loc = self.det_unit_movement(unit)
+			if (loc.x < 0) or (loc.y < 0) or (loc.x > 11) or (loc.y > 11):
+				loc = self.get_opponent_HQ()
+
 			self.actions.append(f'MOVE {unit.id} {loc.x} {loc.y}')
 
 	def get_train_position(self):
