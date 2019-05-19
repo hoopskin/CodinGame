@@ -125,7 +125,7 @@ class Game:
 		for unit in unitList:
 			loc = self.det_unit_movement(unit)
 			if (loc.x < 0) or (loc.y < 0) or (loc.x > 11) or (loc.y > 11):
-				loc = self.get_opponent_HQ()
+				loc = self.get_opponent_HQ().pos
 
 			self.actions.append(f'MOVE {unit.id} {loc.x} {loc.y}')
 
@@ -142,7 +142,7 @@ class Game:
 
 				trainX = oldestUnit.pos.x+randomOffset[0]
 				trainY = oldestUnit.pos.y+randomOffset[1]
-				if (trainX < 0) or (trainY < 0) or (trainX > 11) or (trainY > 11):
+				if (trainX < 0) or (trainY < 0) or (trainX > 11) or (trainY > 11) or (Position(trainX, trainY) in [u.pos for u in self.units]):
 					continue
 				else:
 					break
