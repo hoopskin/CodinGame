@@ -61,16 +61,42 @@ class Game:
 			if b.type == HQ and b.owner == OPPONENT:
 				return b
 
+	def det_unit_movement(self, unit):
+		unitX = unit.pos.x
+		unitY = unit.pos.y
+		#If you can kill something next to you, do that
+		oppUnitPositions = [u.pos for u in self.units if u.owner == OPPONENT]
+		for offset in [[0, -1], [1, 0], [0, 1], [-1, 0]]:
+			pass
+
+		#If there's a free spot next to you (looking clock-wise starting at N), take it
+		for offset in [[0, -1], [1, 0], [0, 1], [-1, 0]]:
+			newX = unitX+offset[0]
+			newY = unitY+offset[1]
+
+			if (newX < 0) or (newY < 0) or (newX > 11) or (newY > 11):
+				#Invalid so skip
+				continue
+
+			try:
+				spot = self.board[newY][newX]
+				if spot == NEUTRAL:
+					debugline = "%i saw NEUTRAL at (%i, %i)" % (unit.id, newX, newY)
+					print(debugline, file=sys.stderr)
+					return Position(newX, newY)
+			except(IndexError):
+				pass
+
+		#If you can't do anything, just go towards HQ
+		return self.get_opponent_HQ().pos
+
 	def move_units(self):
 		#Kill ability: 1=NA, 2=1, 3=All
 		#Ergo, 1 = Gathers, 2=Jaime, 3=Arya
-
-		#Zombie Wakanda plan. Just keep going at them.
-		loc = self.get_opponent_HQ().pos
-
-		for unit in self.units:
-			if unit.owner == ME:
-				self.actions.append(f'MOVE {unit.id} {loc.x} {loc.y}')
+		unitList = [u for u in self.units if u.owner == ME]
+		for unit in unitList:
+			loc = self.det_unit_movement(unit)
+			self.actions.append(f'MOVE {unit.id} {loc.x} {loc.y}')
 
 	def get_train_position(self):
 		# TODO: this just puts a unit at the HQ. Safe, but fix
@@ -103,6 +129,7 @@ class Game:
 		self.units.clear()
 		self.buildings.clear()
 		self.actions.clear()
+		self.board.clear()
 
 		self.gold = int(input())
 		self.income = int(input())
