@@ -1,5 +1,4 @@
-import sys
-import math
+import sys, math, random
 
 # MAP SIZE
 WIDTH = 12
@@ -64,10 +63,23 @@ class Game:
 	def det_unit_movement(self, unit):
 		unitX = unit.pos.x
 		unitY = unit.pos.y
+		oppHQPos = self.get_opponent_HQ().pos
+
+		#If you are right next to the HQ, kill them
+		for offset in [[0, -1], [1, 0], [0, 1], [-1, 0]]:
+			newX = unitX+offset[0]
+			newY = unitY+offset[1]
+			if Position(newX, newY) == oppHQPos:
+				return Position(newX, newY)
+
+
 		#If you can kill something next to you, do that
 		oppUnitPositions = [u.pos for u in self.units if u.owner == OPPONENT]
 		for offset in [[0, -1], [1, 0], [0, 1], [-1, 0]]:
-			pass
+			newX = unitX+offset[0]
+			newY = unitY+offset[1]
+			if Position(newX, newY) in oppUnitPositions:
+				return Position(newX, newY)
 
 		#If there's a free spot next to you (looking clock-wise starting at N), take it
 		for offset in [[0, -1], [1, 0], [0, 1], [-1, 0]]:
@@ -80,7 +92,7 @@ class Game:
 
 			try:
 				spot = self.board[newY][newX]
-				if spot == NEUTRAL:
+				if spot in [NEUTRAL, CAPTURED_OPP, INACTIVE_OPP]:
 					debugline = "%i saw NEUTRAL at (%i, %i)" % (unit.id, newX, newY)
 					print(debugline, file=sys.stderr)
 					return Position(newX, newY)
@@ -88,7 +100,23 @@ class Game:
 				pass
 
 		#If you can't do anything, just go towards HQ
-		return self.get_opponent_HQ().pos
+		#return self.get_opponent_HQ().pos
+		if self.get_opponent_HQ().pos.x == 0:
+			#Need to go North / West
+			if random.random() < .5:
+				#North
+				return Position(unitX, unitY-1)
+			else:
+				#West
+				return Position(unitX-1, unitY)
+		else:
+			#Need to go South / East
+			if random.random() < .5:
+				#South
+				return Position(unitX, unitY+1)
+			else:
+				#West
+				return Position(unitX+1, unitY)
 
 	def move_units(self):
 		#Kill ability: 1=NA, 2=1, 3=All
@@ -100,23 +128,54 @@ class Game:
 
 	def get_train_position(self):
 		# TODO: this just puts a unit at the HQ. Safe, but fix
-		hq = self.get_my_HQ()
+		try:
+			units = [u for u in self.units if u.owner == ME]
+			oldestUnit = [u for u in units if u.id == min([u.id for u in units])][0]
 
-		if hq.pos.x == 0:
-			return Position(0, 1)
-		return Position(11, 10)
+			while True:
+				offsetOptions = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+				randomOffset = random.choice(offsetOptions)
+				offsetOptions.remove(randomOffset)
+
+				trainX = oldestUnit.pos.x+randomOffset[0]
+				trainY = oldestUnit.pos.y+randomOffset[1]
+				if (trainX < 0) or (trainY < 0) or (trainX > 11) or (trainY > 11):
+					continue
+				else:
+					break
+
+			return Position(oldestUnit.pos.x+randomOffset[0], oldestUnit.pos.y+randomOffset[1])		
+		except(IndexError):
+			hq = self.get_my_HQ()
+
+			if hq.pos.x == 0:
+				return Position(0, 1)
+			return Position(11, 10)
 
 
 	def train_units(self):
 		train_pos = self.get_train_position()
-
+		myUpkeep = sum([u.upkeep for u in self.units if u.owner == 'ME'])
 		#Recruit Costs: 1=10, 2=20, 3=30
 		#Kill ability: 1=NA, 2=1, 3=All
 		#Ergo, 1 = Gathers, 2=Jaime, 3=Arya
+		#upkeep = {1:1, 2:4, 3:20}
 
 		# TODO: This should update based on units
-		if self.gold > 10 + len([u for u in self.units if u.owner == 'ME']):
+		if (self.gold > 30 + myUpkeep) and (self.income >= 20):
+			self.actions.append(f'TRAIN 3 {train_pos.x} {train_pos.y}')
+			self.gold -= 30
+			self.income -= 20
+
+		if (self.gold > 20 + myUpkeep) and (self.income >= 4):
+			self.actions.append(f'TRAIN 2 {train_pos.x} {train_pos.y}')
+			self.gold -= 20
+			self.income -= 4
+
+		if (self.gold > 10 + myUpkeep) and (self.income >= 1):
 			self.actions.append(f'TRAIN 1 {train_pos.x} {train_pos.y}')
+			self.gold -= 10
+			self.income -= 1
 
 
 	def init(self):
